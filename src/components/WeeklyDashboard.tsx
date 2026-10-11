@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { db } from '../db'
-import { useToday } from '../hooks/useToday'
+import { formatCalendarDay } from '../lib/dates'
 import { formatNutrition, nutritionFields } from '../lib/nutrition'
 import { nutritionStyles } from '../lib/nutritionStyles'
 import { getWeekDates, getWeeklySummary } from '../lib/weekly'
@@ -10,6 +10,8 @@ import SectionHeader from './SectionHeader'
 import WeeklyBarChart from './WeeklyBarChart'
 
 // Start: Describe query results and the series shown in the calorie and macro charts.
+type WeeklyDashboardProps = { selectedDate: string }
+
 type WeeklyFoodsResult = {
   weekStart: string
   foods: FoodEntry[]
@@ -24,29 +26,28 @@ const macroSeries = [
 ] as const
 // End: Weekly data and chart series definitions.
 
-function WeeklyDashboard() {
-  // Start: Track local day changes and retries, then find this week's inclusive date range.
-  const today = useToday()
+function WeeklyDashboard({ selectedDate }: WeeklyDashboardProps) {
+  // Start: Find the week containing the shared selected date and track query retries.
   const [queryAttempt, setQueryAttempt] = useState(0)
-  const dates = getWeekDates(today)
+  const dates = getWeekDates(selectedDate)
   const weekStart = dates[0]
   const weekEnd = dates[6]
   // End: Weekly query state and date range.
 
-  // Start: Subscribe to diary entries for this week so additions and removals refresh the charts.
+  // Start: Subscribe to the selected week so additions, removals, and date moves refresh the charts.
   const result = useLiveQuery(async (): Promise<WeeklyFoodsResult> => {
     try {
       const foods = await db.foodEntries.where('date').between(weekStart, weekEnd, true, true).toArray()
       return { weekStart, foods, error: null }
     } catch {
-      return { weekStart, foods: [], error: 'Could not load foods for this week.' }
+      return { weekStart, foods: [], error: 'Could not load foods for the selected week.' }
     }
   }, [weekStart, weekEnd, queryAttempt])
   // End: Live weekly diary query.
 
   // Start: Show loading and retry feedback before displaying the weekly summary.
   if (!result || result.weekStart !== weekStart) {
-    return <p role="status" className="mt-5 text-sm text-slate-500">Loading this week's totals...</p>
+    return <p role="status" className="mt-5 text-sm text-slate-500">Loading the selected week's totals...</p>
   }
   if (result.error) {
     return (
@@ -61,24 +62,21 @@ function WeeklyDashboard() {
   }
   // End: Loading and error views.
 
-  // Start: Derive seven chart days, averages over logged days, and a local date label for the week.
-  const { days, loggedDayCount, averages } = getWeeklySummary(result.foods, today)
-  const formatDate = (date: string) => new Date(`${date}T12:00:00`).toLocaleDateString(undefined, {
-    month: 'short', day: 'numeric', year: 'numeric',
-  })
-  const weekLabel = `${formatDate(weekStart)} - ${formatDate(weekEnd)}`
+  // Start: Derive totals and averages for the selected week, with readable local date labels.
+  const { days, loggedDayCount, averages } = getWeeklySummary(result.foods, selectedDate)
+  const dateOptions = { month: 'short', day: 'numeric', year: 'numeric' } as const
+  const weekLabel = `${formatCalendarDay(weekStart, dateOptions)} - ${formatCalendarDay(weekEnd, dateOptions)}`
   // End: Weekly summary values and labels.
 
   return (
     <div className="mt-5 space-y-8">
-      {/* Start: Week dates and averaging guidance in a softly tinted context panel. */}
+      {/* Start: Averaging guidance and the selected week's empty state. */}
       <div className="rounded-xl border border-blue-100 bg-blue-50 px-4 py-3">
-        <p className="text-sm font-medium text-blue-900">{weekLabel}</p>
         <p className="mt-1 text-xs text-blue-800">
           Monday-Sunday. Averages include only days with entries ({loggedDayCount} logged {loggedDayCount === 1 ? 'day' : 'days'}).
         </p>
         {result.foods.length === 0 && (
-          <p className="mt-3 rounded-lg bg-slate-50 p-3 text-sm text-slate-500">No foods logged this week yet. Add an entry in Daily to start filling these charts.</p>
+          <p className="mt-3 rounded-lg bg-slate-50 p-3 text-sm text-slate-500">No foods logged for this week yet. Choose a day in Daily to add food.</p>
         )}
       </div>
       {/* End: Week context and empty state. */}
@@ -93,7 +91,7 @@ function WeeklyDashboard() {
             </p>
           </div>
         </SectionHeader>
-        <WeeklyBarChart title="Weekly calories" days={days} series={calorieSeries} unit="kcal" today={today} />
+        <WeeklyBarChart title="Weekly calories" days={days} series={calorieSeries} unit="kcal" selectedDate={selectedDate} />
       </section>
       {/* End: Calorie chart and average. */}
 
@@ -110,7 +108,7 @@ function WeeklyDashboard() {
             </div>
           ))}
         </dl>
-        <WeeklyBarChart title="Weekly macros" days={days} series={macroSeries} unit="g" today={today} />
+        <WeeklyBarChart title="Weekly macros" days={days} series={macroSeries} unit="g" selectedDate={selectedDate} />
         <p className="mt-1 text-xs text-slate-500">Each day has three bars: P = protein, C = carbs, F = fats. All values are in grams.</p>
       </section>
       {/* End: Macro chart and averages. */}
@@ -133,8 +131,8 @@ function WeeklyDashboard() {
             </thead>
             <tbody>
               {days.map((day) => (
-                <tr key={day.date} className="border-b border-slate-100">
-                  <th scope="row" className="px-2 py-3 font-normal">{new Date(`${day.date}T12:00:00`).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })}</th>
+                <tr key={day.date} aria-current={day.date === selectedDate ? 'date' : undefined} className={`border-b border-slate-100 ${day.date === selectedDate ? 'bg-blue-50' : ''}`}>
+                  <th scope="row" className="px-2 py-3 font-normal">{formatCalendarDay(day.date, { weekday: 'short', month: 'short', day: 'numeric' })}</th>
                   {nutritionFields.map((field) => (
                     <td key={field.key} className="px-2 py-3 text-right">{formatNutrition(day[field.key])}</td>
                   ))}

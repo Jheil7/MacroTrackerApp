@@ -1,4 +1,5 @@
 import { useId } from 'react'
+import { formatCalendarDay } from '../lib/dates'
 import { formatNutrition } from '../lib/nutrition'
 import type { WeeklyDay } from '../lib/weekly'
 import type { NutritionTotals } from '../types/food'
@@ -15,7 +16,7 @@ type WeeklyBarChartProps = {
   days: readonly WeeklyDay[]
   series: readonly ChartSeries[]
   unit: 'kcal' | 'g'
-  today: string
+  selectedDate: string
 }
 
 const width = 640
@@ -25,7 +26,7 @@ const plotWidth = width - margin.left - margin.right
 const plotHeight = height - margin.top - margin.bottom
 // End: Chart configuration.
 
-function WeeklyBarChart({ title, days, series, unit, today }: WeeklyBarChartProps) {
+function WeeklyBarChart({ title, days, series, unit, selectedDate }: WeeklyBarChartProps) {
   // Start: Derive the chart scale and bar positions directly from this week's totals.
   const chartId = useId()
   const highestValue = Math.max(unit === 'kcal' ? 100 : 10, ...days.flatMap((day) => series.map((item) => day[item.key])))
@@ -35,7 +36,7 @@ function WeeklyBarChart({ title, days, series, unit, today }: WeeklyBarChartProp
   const innerWidth = groupWidth * 0.62
   const barGap = 3
   const barWidth = (innerWidth - barGap * (series.length - 1)) / series.length
-  const dayLabels = days.map((day) => new Date(`${day.date}T12:00:00`).toLocaleDateString(undefined, { weekday: 'short' }))
+  const dayLabels = days.map((day) => formatCalendarDay(day.date, { weekday: 'short' }))
   const legend = series.map((item) => ({ label: item.label, color: item.color }))
   // End: Derived chart layout and legend.
 
@@ -56,7 +57,7 @@ function WeeklyBarChart({ title, days, series, unit, today }: WeeklyBarChartProp
           aria-labelledby={`${chartId}-title`} aria-describedby={`${chartId}-description`} className="block min-w-[520px] w-full">
           <title id={`${chartId}-title`}>{`${title} by day`}</title>
           <desc id={`${chartId}-description`}>
-            {`${series.map((item) => item.label).join(', ')} in ${unit}, Monday through Sunday. Hover over a bar for its exact total, or expand View daily totals below both charts.`}
+            {`${series.map((item) => item.label).join(', ')} in ${unit}, Monday through Sunday. Selected date: ${selectedDate}. Hover over a bar for its exact total, or expand View daily totals below both charts.`}
           </desc>
 
           {/* Start: Horizontal grid lines and numeric labels with a shared zero baseline. */}
@@ -74,7 +75,7 @@ function WeeklyBarChart({ title, days, series, unit, today }: WeeklyBarChartProp
           })}
           {/* End: Chart grid and vertical scale. */}
 
-          {/* Start: One group per day, containing a calorie bar or three labeled macro bars. */}
+          {/* Start: One group per day, containing calorie or macro bars and highlighting the selected date. */}
           {days.map((day, dayIndex) => {
             const center = margin.left + groupWidth * (dayIndex + 0.5)
             return (
@@ -104,7 +105,7 @@ function WeeklyBarChart({ title, days, series, unit, today }: WeeklyBarChartProp
                   )
                 })}
                 <text x={center} y={margin.top + plotHeight + 34} textAnchor="middle"
-                  className={`text-xs ${day.date === today ? 'fill-emerald-800 font-semibold' : 'fill-slate-600'}`}>
+                  className={`text-xs ${day.date === selectedDate ? 'fill-blue-800 font-semibold' : 'fill-slate-600'}`}>
                   {dayLabels[dayIndex]}
                 </text>
               </g>

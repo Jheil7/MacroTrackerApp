@@ -6,10 +6,13 @@ import { getFoodQuantityUnit, resolveStoredSelection } from '../lib/storedFoods'
 import type { FoodFormValues, FoodLogInput } from '../types/food'
 import NutritionFields from './NutritionFields'
 
+// Start: Receive persistence callbacks and pause the form while another diary mutation runs.
 type AddFoodFormProps = {
+  disabled: boolean
   onAdd: (food: FoodLogInput) => Promise<void>
   onClose: () => void
 }
+// End: Add food form props.
 
 const emptyValues: FoodFormValues = {
   name: '',
@@ -22,7 +25,7 @@ const emptyValues: FoodFormValues = {
 const inputClassName =
   'mt-1.5 w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-sm focus:border-emerald-600 focus:outline-2 focus:outline-offset-2 focus:outline-emerald-600 disabled:bg-slate-100 disabled:text-slate-500'
 
-function AddFoodForm({ onAdd, onClose }: AddFoodFormProps) {
+function AddFoodForm({ onAdd, onClose, disabled }: AddFoodFormProps) {
   // Start: Load saved items and track the manual draft, selection, quantity, and save status.
   const library = useStoredLibrary()
   const [values, setValues] = useState(emptyValues)
@@ -59,10 +62,10 @@ function AddFoodForm({ onAdd, onClose }: AddFoodFormProps) {
   }
   // End: Stored item selection handler.
 
-  // Start: Validate and log a manual entry or saved item, keeping the draft if saving fails.
+  // Start: Validate and log to the selected day, avoiding competing mutations and retaining failed drafts.
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
-    if (isSaving) return
+    if (isSaving || disabled) return
 
     let food: FoodLogInput
 
@@ -96,7 +99,7 @@ function AddFoodForm({ onAdd, onClose }: AddFoodFormProps) {
       onSubmit={handleSubmit}
       className="mt-4 rounded-xl border border-slate-200 bg-slate-50 p-4 sm:p-5"
     >
-      <fieldset disabled={isSaving}>
+      <fieldset disabled={isSaving || disabled}>
         {/* Start: Food name and grouped dropdown for manual entries, base foods, and meals. */}
         <div className="grid gap-4 sm:grid-cols-2">
           <div>

@@ -9,15 +9,25 @@ keys, Home, and End while a tab is focused.
 The Daily tab displays calories, protein, carbs, and fats. Use **+ Add food** to
 enter calories in kcal and macros in grams. A food name is optional. Added foods
 appear below the totals and are saved in the browser with Dexie, so they remain
-after a refresh. Daily totals are calculated from foods logged on the current
-local calendar day.
+after a refresh. Use the calendar picker, **Previous day**, **Next day**, and
+**Today** to choose the diary date. Totals and new entries use that selected date,
+which stays selected across midnight and tab changes. The add form shows the
+date it will save to; navigation pauses while a diary change is being saved.
+Refreshing the app starts on today's local date.
 
-The Weekly tab shows the current Monday-Sunday week with blue daily calorie
-bars and grouped protein, carb, and fat bars. Protein is green, carbs are amber,
+Use **Change date** on a diary entry to move it to another day. Its nutrition,
+serving/gram details, and creation timestamp stay intact. Daily and weekly totals
+refresh automatically after the move. Existing entries keep their original dates
+until you move them.
+
+The Weekly tab shows the Monday-Sunday week containing the selected date. Use
+**Previous week**, **Next week**, **Today**, or the picker to browse weeks. Daily
+and Weekly share the same selected date; the selected day is highlighted in the
+charts and totals table. The charts show blue daily calorie bars and grouped
+protein, carb, and fat bars. Protein is green, carbs are amber,
 and fats are purple. Daily averages include only days with logged food; multiple
 entries on the same day count as one day. The charts still show all seven days.
-Charts refresh when diary entries are added or
-removed. Hover over a bar for its value, or expand **View daily totals** for
+Charts refresh when diary entries are added, removed, or moved to another day. Hover over a bar for its value, or expand **View daily totals** for
 the full table. Charts use SVG without an additional chart library.
 
 The Stored Foods tab has two sections:

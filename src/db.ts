@@ -1,7 +1,8 @@
 import { Dexie } from 'dexie'
 import type { EntityTable } from 'dexie'
 import { getMealNutrition } from './lib/storedFoods.ts'
-import type { FoodEntry, StoredFood, StoredMeal, StoredMealInput } from './types/food'
+import { isCalendarDay } from './lib/dates.ts'
+import type { FoodEntry, FoodLogInput, StoredFood, StoredMeal, StoredMealInput } from './types/food'
 
 // Start: Define typed browser database tables and retain version 1 data when adding the library.
 class MacroTrackerDatabase extends Dexie {
@@ -22,6 +23,21 @@ class MacroTrackerDatabase extends Dexie {
 
 export const db = new MacroTrackerDatabase()
 // End: Database schema and shared instance.
+
+// Start: Persist a nutrition snapshot to an explicitly chosen diary date, keeping the creation time separate.
+export async function saveFoodEntry(food: FoodLogInput, date: string): Promise<number> {
+  if (!isCalendarDay(date)) throw new Error('Choose a valid calendar date.')
+  return db.foodEntries.add({ ...food, date, createdAt: Date.now() })
+}
+// End: Selected-date diary save.
+
+// Start: Change only an existing entry's date so nutrition, source quantities, and creation time are preserved.
+export async function moveFoodEntryDate(id: number, date: string): Promise<void> {
+  if (!isCalendarDay(date)) throw new Error('Choose a valid calendar date.')
+  const updated = await db.foodEntries.update(id, { date })
+  if (updated === 0) throw new Error('This entry no longer exists. Reload the day and try again.')
+}
+// End: Diary date correction.
 
 // Start: Validate ingredient references and save the meal within one database transaction.
 export async function saveStoredMeal(meal: StoredMealInput): Promise<void> {

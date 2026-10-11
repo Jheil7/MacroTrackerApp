@@ -1,4 +1,4 @@
-import { getLocalDay } from './dates.ts'
+import { getLocalDay, shiftCalendarDay } from './dates.ts'
 import { getDailyTotals } from './nutrition.ts'
 import type { FoodEntry, NutritionTotals } from '../types/food'
 
@@ -13,22 +13,21 @@ export type WeeklySummary = {
 // End: Weekly summary types.
 
 // Start: Build Monday-Sunday date keys using local calendar arithmetic across month and DST changes.
-export function getWeekDates(today: string): string[] {
-  const [year, month, day] = today.split('-').map(Number)
-  const monday = new Date(year, month - 1, day, 12)
-  monday.setDate(monday.getDate() - (monday.getDay() + 6) % 7)
+export function getWeekDates(selectedDate: string): string[] {
+  const localDate = new Date(`${selectedDate}T12:00:00`)
+  const monday = shiftCalendarDay(selectedDate, -(localDate.getDay() + 6) % 7)
 
   return Array.from({ length: 7 }, (_, index) => {
-    const date = new Date(monday)
-    date.setDate(monday.getDate() + index)
+    const date = new Date(`${monday}T12:00:00`)
+    date.setDate(date.getDate() + index)
     return getLocalDay(date)
   })
 }
 // End: Local week date calculation.
 
 // Start: Sum all seven chart days, but average only over distinct days with diary entries.
-export function getWeeklySummary(foods: readonly FoodEntry[], today: string): WeeklySummary {
-  const weekDates = getWeekDates(today)
+export function getWeeklySummary(foods: readonly FoodEntry[], selectedDate: string): WeeklySummary {
+  const weekDates = getWeekDates(selectedDate)
   const days = weekDates.map((date) => ({
     date,
     ...getDailyTotals(foods.filter((food) => food.date === date)),

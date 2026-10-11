@@ -1,5 +1,7 @@
 import { useState } from 'react'
 import type { KeyboardEvent } from 'react'
+import { getLocalDay } from '../lib/dates'
+import DateNavigation from './DateNavigation'
 import DailyDashboard from './DailyDashboard'
 import SectionHeader from './SectionHeader'
 import StoredFoodsDashboard from './StoredFoodsDashboard'
@@ -28,9 +30,11 @@ type TabId = (typeof tabs)[number]['id']
 // End: Tab configuration and type.
 
 function Dashboard() {
-  // Start: Track which dashboard tab is visible.
+  // Start: Share a selected diary date across tabs; initialize it once so midnight cannot change it.
   const [activeTab, setActiveTab] = useState<TabId>('daily')
-  // End: Active tab state.
+  const [selectedDate, setSelectedDate] = useState(getLocalDay)
+  const [isDiaryBusy, setIsDiaryBusy] = useState(false)
+  // End: Shared dashboard state.
 
   // Start: Switch tabs and move keyboard focus with arrow, Home, and End keys.
   function handleTabKeyDown(event: KeyboardEvent<HTMLDivElement>) {
@@ -115,12 +119,22 @@ function Dashboard() {
             {/* Start: Use the shared blue heading band to separate the tab title from its cards. */}
             <SectionHeader title={tab.title} headingLevel="h2" />
             {/* End: Tab heading. */}
+            {/* Start: Daily and Weekly navigate the same date, preserving it when switching tabs. */}
+            {tab.id !== 'foods' && (
+              <DateNavigation
+                selectedDate={selectedDate}
+                onDateChange={setSelectedDate}
+                mode={tab.id === 'daily' ? 'day' : 'week'}
+                disabled={isDiaryBusy}
+              />
+            )}
+            {/* End: Shared calendar navigation. */}
             {tab.id === 'daily' ? (
-              <DailyDashboard />
+              <DailyDashboard selectedDate={selectedDate} isBusy={isDiaryBusy} onBusyChange={setIsDiaryBusy} />
             ) : tab.id === 'foods' ? (
               <StoredFoodsDashboard />
             ) : (
-              <WeeklyDashboard />
+              <WeeklyDashboard selectedDate={selectedDate} />
             )}
           </section>
         ))}
