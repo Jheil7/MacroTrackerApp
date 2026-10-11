@@ -41,7 +41,7 @@ test('weeks containing a leap day or daylight-saving change still have seven cal
 // End: Calendar week tests.
 
 // Start: Verify chart totals, zero days, averages, and changes after an entry is removed.
-test('multiple entries on a day sum all nutrients and averages include empty days', () => {
+test('multiple entries on a day sum all nutrients and each logged day counts once in averages', () => {
   const result = getWeeklySummary([
     entry(1, '2026-10-05', 600, 30, 70, 20),
     entry(2, '2026-10-05', 450, 20, 50, 15),
@@ -50,7 +50,8 @@ test('multiple entries on a day sum all nutrients and averages include empty day
   assert.deepEqual(result.days[0], { date: '2026-10-05', calories: 1050, protein: 50, carbs: 120, fats: 35 })
   assert.deepEqual(result.days[1], { date: '2026-10-06', calories: 0, protein: 0, carbs: 0, fats: 0 })
   assert.equal(result.days[6].calories, 350)
-  assert.deepEqual(result.averages, { calories: 200, protein: 10, carbs: 20, fats: 6 })
+  assert.equal(result.loggedDayCount, 2)
+  assert.deepEqual(result.averages, { calories: 700, protein: 35, carbs: 70, fats: 21 })
 })
 
 test('entries outside the week do not affect any bars or averages', () => {
@@ -59,12 +60,14 @@ test('entries outside the week do not affect any bars or averages', () => {
     entry(2, '2026-10-05', 700, 70, 140, 35),
     entry(3, '2026-10-12', 9000, 900, 900, 900),
   ], '2026-10-10')
-  assert.deepEqual(result.averages, { calories: 100, protein: 10, carbs: 20, fats: 5 })
+  assert.equal(result.loggedDayCount, 1)
+  assert.deepEqual(result.averages, { calories: 700, protein: 70, carbs: 140, fats: 35 })
 })
 
 test('an empty week has seven separate zero-valued days and zero averages', () => {
   const result = getWeeklySummary([], '2026-10-10')
   assert.equal(result.days.length, 7)
+  assert.equal(result.loggedDayCount, 0)
   assert.deepEqual(result.averages, { calories: 0, protein: 0, carbs: 0, fats: 0 })
   result.days[0].calories = 100
   assert.equal(result.days[1].calories, 0)
@@ -76,7 +79,7 @@ test('decimal nutrition is preserved until display formatting and diary records 
   const records = Object.freeze([food])
   const result = getWeeklySummary(records, '2026-10-10')
   assert.equal(result.days[0].fats, 1.245)
-  assert.equal(result.averages.calories, 124.5 / 7)
+  assert.equal(result.averages.calories, 124.5)
   assert.deepEqual(food, entry(1, '2026-10-05', 124.5, 4.98, 49.8, 1.245))
 })
 
@@ -86,7 +89,41 @@ test('removing an entry reduces the daily bar and weekly average', () => {
   const after = getWeeklySummary(foods.filter((food) => food.id !== 1), '2026-10-10')
   assert.equal(before.days[0].calories, 1050)
   assert.equal(after.days[0].calories, 350)
-  assert.equal(before.averages.calories, 150)
-  assert.equal(after.averages.calories, 50)
+  assert.equal(before.averages.calories, 1050)
+  assert.equal(after.averages.calories, 350)
+})
+test('a single logged day uses that day for all nutrient averages', () => {
+  const result = getWeeklySummary([entry(1, '2026-10-10', 1800, 120, 180, 60)], '2026-10-10')
+
+  assert.equal(result.days.length, 7)
+  assert.equal(result.loggedDayCount, 1)
+  assert.deepEqual(result.averages, { calories: 1800, protein: 120, carbs: 180, fats: 60 })
+})
+
+test('a logged day with zero nutrients still counts toward the average', () => {
+  const result = getWeeklySummary([
+    entry(1, '2026-10-05', 600, 60, 80, 20),
+    entry(2, '2026-10-06', 0),
+  ], '2026-10-10')
+
+  assert.equal(result.loggedDayCount, 2)
+  assert.deepEqual(result.averages, { calories: 300, protein: 30, carbs: 40, fats: 10 })
+})
+
+test('removing the last entry on a day updates the divisor and handles an empty week', () => {
+  const foods = [
+    entry(1, '2026-10-05', 700, 70, 140, 35),
+    entry(2, '2026-10-06', 500, 50, 100, 25),
+  ]
+  const before = getWeeklySummary(foods, '2026-10-10')
+  const after = getWeeklySummary(foods.slice(0, 1), '2026-10-10')
+  const empty = getWeeklySummary([], '2026-10-10')
+
+  assert.equal(before.loggedDayCount, 2)
+  assert.deepEqual(before.averages, { calories: 600, protein: 60, carbs: 120, fats: 30 })
+  assert.equal(after.loggedDayCount, 1)
+  assert.deepEqual(after.averages, { calories: 700, protein: 70, carbs: 140, fats: 35 })
+  assert.equal(empty.loggedDayCount, 0)
+  assert.deepEqual(empty.averages, { calories: 0, protein: 0, carbs: 0, fats: 0 })
 })
 // End: Weekly aggregation tests.

@@ -61,8 +61,8 @@ function WeeklyDashboard() {
   }
   // End: Loading and error views.
 
-  // Start: Derive seven daily totals, their averages, and a local date label for the week.
-  const { days, averages } = getWeeklySummary(result.foods, today)
+  // Start: Derive seven chart days, averages over logged days, and a local date label for the week.
+  const { days, loggedDayCount, averages } = getWeeklySummary(result.foods, today)
   const formatDate = (date: string) => new Date(`${date}T12:00:00`).toLocaleDateString(undefined, {
     month: 'short', day: 'numeric', year: 'numeric',
   })
@@ -74,7 +74,9 @@ function WeeklyDashboard() {
       {/* Start: Week dates and averaging guidance in a softly tinted context panel. */}
       <div className="rounded-xl border border-blue-100 bg-blue-50 px-4 py-3">
         <p className="text-sm font-medium text-blue-900">{weekLabel}</p>
-        <p className="mt-1 text-xs text-blue-800">Monday-Sunday. Averages include all 7 days; days without entries count as zero.</p>
+        <p className="mt-1 text-xs text-blue-800">
+          Monday-Sunday. Averages include only days with entries ({loggedDayCount} logged {loggedDayCount === 1 ? 'day' : 'days'}).
+        </p>
         {result.foods.length === 0 && (
           <p className="mt-3 rounded-lg bg-slate-50 p-3 text-sm text-slate-500">No foods logged this week yet. Add an entry in Daily to start filling these charts.</p>
         )}

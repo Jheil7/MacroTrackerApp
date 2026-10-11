@@ -14,8 +14,9 @@ local calendar day.
 
 The Weekly tab shows the current Monday-Sunday week with blue daily calorie
 bars and grouped protein, carb, and fat bars. Protein is green, carbs are amber,
-and fats are purple. Daily averages include all seven days, counting days
-without entries as zero. Charts refresh when diary entries are added or
+and fats are purple. Daily averages include only days with logged food; multiple
+entries on the same day count as one day. The charts still show all seven days.
+Charts refresh when diary entries are added or
 removed. Hover over a bar for its value, or expand **View daily totals** for
 the full table. Charts use SVG without an additional chart library.
 
